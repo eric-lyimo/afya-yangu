@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:mtmeru_afya_yangu/nav.bar.dart';
 import 'package:mtmeru_afya_yangu/providers/cart.provider.dart';
@@ -16,6 +18,7 @@ import 'package:mtmeru_afya_yangu/providers/user.provider.dart';
 import 'package:mtmeru_afya_yangu/utils/theme/theme.dart';
 
 void main() async {
+    HttpOverrides.global = MyHttpOverrides();
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize SharedPreferences
@@ -23,19 +26,26 @@ void main() async {
   bool isRemembered = prefs.getBool('rememberMe') ?? false;
 
   // Initialize UserProvider and load user from the database
-  final userProvider = UserProvider();
-  await userProvider.loadUserFromDatabase();
-
+  final userProvider = UserState();
+  
   runApp(
     MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => userProvider),
-        ChangeNotifierProvider(create: (_) => PregnancyState()),
-        ChangeNotifierProvider(create: (_) => CartProvider()),
+      providers: [      
+      ChangeNotifierProvider(create: (_) => userProvider),  // Providing UserState
+      ChangeNotifierProvider(create: (_) => PregnancyState(userProvider)), 
+      ChangeNotifierProvider(create: (_) => CartProvider()),  // Providing CartProvider
       ],
       child: AfyaYangu(isRemembered: isRemembered),
     ),
   );
+}
+class MyHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return super.createHttpClient(context)
+      ..badCertificateCallback =
+          (X509Certificate cert, String host, int port) => true;
+  }
 }
 
 class AfyaYangu extends StatelessWidget {
@@ -48,7 +58,7 @@ class AfyaYangu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final userProvider = Provider.of<UserProvider>(context);
+    final userProvider = Provider.of<UserState>(context);
 
     return MaterialApp(
       debugShowCheckedModeBanner: false,
@@ -64,16 +74,15 @@ class AfyaYangu extends StatelessWidget {
       themeMode: ThemeMode.system,
       theme: afyaYanguTheme(),
       home: Scaffold(
-        body: SafeArea(
-          child: Center(
+        body:Container(
+            color: const Color(0x00fff8e7),
             child: _determineInitialScreen(userProvider, isRemembered),
           ),
         ),
-      ),
     );
   }
 
-  Widget _determineInitialScreen(UserProvider userProvider, bool isRemembered) {
+  Widget _determineInitialScreen(UserState userProvider, bool isRemembered) {
     if (userProvider.user != null) {
       // If the user is loaded from the database
       return  AfyaBottomNavBar();

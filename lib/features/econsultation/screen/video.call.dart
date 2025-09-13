@@ -1,43 +1,53 @@
 import 'package:flutter/material.dart';
-import 'package:jitsi_meet_flutter_sdk/jitsi_meet_flutter_sdk.dart';
+import 'package:mtmeru_afya_yangu/features/appointments/controllers/appointment.controller.dart';
+import 'package:mtmeru_afya_yangu/features/authentication/models/user.model.dart';
 import 'package:mtmeru_afya_yangu/features/home/components/afyaAppBar.appbar.dart';
+import 'package:mtmeru_afya_yangu/features/services/econsultation.service.dart';
+import 'package:mtmeru_afya_yangu/providers/user.provider.dart';
+import 'package:provider/provider.dart';
 
 class VideoConsultationDashboard extends StatefulWidget {
-
   const VideoConsultationDashboard({super.key});
-  @override
 
+  @override
   State<VideoConsultationDashboard> createState() => _VideoConsultationDashboardState();
 }
 
 class _VideoConsultationDashboardState extends State<VideoConsultationDashboard> {
+  final AppointmentController appointmentController = AppointmentController();
   final bool audioMuted = true;
   final bool videoMuted = true;
   final bool screenShareOn = false;
-  final List<String> participants = [];
-  final _jitsiMeetPlugin = JitsiMeet();
+  final videoService = VideoConsultationService();
 
-  final List<Map<String, dynamic>> previousConsultations = [
-    {"title": "Dr. John Doe", "date": "Nov 25, 2024", "status": "Completed"},
-    {"title": "Dr. Jane Smith", "date": "Nov 10, 2024", "status": "Completed"},
-  ];
+  List<Map<String, dynamic>> consultation = [];
 
-  final List<Map<String, dynamic>> upcomingConsultations = [
-    {
-      "title": "Dr. Mark Lee",
-      "date": "Dec 5, 2024",
-      "status": "Scheduled",
-      "isJoinable": true,
-      "roomId": "mark_lee_123"
-    },
-    {
-      "title": "Dr. Emily Clark",
-      "date": "Dec 15, 2024",
-      "status": "Scheduled",
-      "isJoinable": false,
-      "roomId": "emily_clark_456"
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadConsultations();
+  }
+
+  void _loadConsultations() async {
+    final user = Provider.of<UserState>(context, listen: false).user;
+    final result = await appointmentController.fetchConsultations(user!.token);
+    setState(() {
+      consultation = result.cast<Map<String, dynamic>>();
+    });
+  }
+
+bool isJoinable(String timeString) {
+  try {
+    // Parse UTC datetime from API
+    DateTime consultationTime = DateTime.parse(timeString).toLocal();
+  print(consultationTime);
+    // Compare to local time
+    return consultationTime.isBefore(DateTime.now());
+  } catch (e) {
+
+    return false;
+  }
+}
 
   String getGreeting() {
     final hour = DateTime.now().hour;
@@ -50,120 +60,7 @@ class _VideoConsultationDashboardState extends State<VideoConsultationDashboard>
     }
   }
 
-  join() async {
-    var options = JitsiMeetConferenceOptions(
-      serverURL: "https://meet.jit.si",
-      room: "IncorrectKitchensConcludePossibly",
-      configOverrides: {
-        "startWithAudioMuted": true,
-        "startWithVideoMuted": true,
-      },
-      featureFlags: {
-        FeatureFlags.addPeopleEnabled: true,
-        FeatureFlags.welcomePageEnabled: false,
-        FeatureFlags.preJoinPageEnabled: true,
-        FeatureFlags.unsafeRoomWarningEnabled: true,
-        FeatureFlags.resolution: FeatureFlagVideoResolutions.resolution720p,
-        FeatureFlags.audioFocusDisabled: true,
-        FeatureFlags.audioMuteButtonEnabled: true,
-        FeatureFlags.audioOnlyButtonEnabled: true,
-        FeatureFlags.calenderEnabled: true,
-        FeatureFlags.callIntegrationEnabled: true,
-        FeatureFlags.carModeEnabled: true,
-        FeatureFlags.closeCaptionsEnabled: true,
-        FeatureFlags.conferenceTimerEnabled: true,
-        FeatureFlags.chatEnabled: true,
-        FeatureFlags.filmstripEnabled: true,
-        FeatureFlags.fullScreenEnabled: true,
-        FeatureFlags.helpButtonEnabled: true,
-        FeatureFlags.inviteEnabled: true,
-        FeatureFlags.androidScreenSharingEnabled: true,
-        FeatureFlags.speakerStatsEnabled: true,
-        FeatureFlags.kickOutEnabled: true,
-        FeatureFlags.liveStreamingEnabled: true,
-        FeatureFlags.lobbyModeEnabled: true,
-        FeatureFlags.meetingNameEnabled: true,
-        FeatureFlags.meetingPasswordEnabled: true,
-        FeatureFlags.notificationEnabled: true,
-        FeatureFlags.overflowMenuEnabled: true,
-        FeatureFlags.pipEnabled: true,
-        FeatureFlags.pipWhileScreenSharingEnabled: true,
-        FeatureFlags.preJoinPageHideDisplayName: true,
-        FeatureFlags.raiseHandEnabled: true,
-        FeatureFlags.reactionsEnabled: true,
-        FeatureFlags.recordingEnabled: true,
-        FeatureFlags.replaceParticipant: true,
-        FeatureFlags.securityOptionEnabled: true,
-        FeatureFlags.serverUrlChangeEnabled: true,
-        FeatureFlags.settingsEnabled: true,
-        FeatureFlags.tileViewEnabled: true,
-        FeatureFlags.videoMuteEnabled: true,
-        FeatureFlags.videoShareEnabled: true,
-        FeatureFlags.toolboxEnabled: true,
-        FeatureFlags.iosRecordingEnabled: true,
-        FeatureFlags.iosScreenSharingEnabled: true,
-        FeatureFlags.toolboxAlwaysVisible: true,
-      },
-      userInfo: JitsiMeetUserInfo(
-          displayName: "Gabi",
-          email: "gabi.borlea.1@gmail.com",
-          avatar:
-              "https://avatars.githubusercontent.com/u/57035818?s=400&u=02572f10fe61bca6fc20426548f3920d53f79693&v=4"),
-    );
 
-    var listener = JitsiMeetEventListener(
-      conferenceJoined: (url) {
-        debugPrint("conferenceJoined: url: $url");
-      },
-      conferenceTerminated: (url, error) {
-        debugPrint("conferenceTerminated: url: $url, error: $error");
-      },
-      conferenceWillJoin: (url) {
-        debugPrint("conferenceWillJoin: url: $url");
-      },
-      participantJoined: (email, name, role, participantId) {
-        debugPrint(
-          "participantJoined: email: $email, name: $name, role: $role, "
-          "participantId: $participantId",
-        );
-        participants.add(participantId!);
-      },
-      participantLeft: (participantId) {
-        debugPrint("participantLeft: participantId: $participantId");
-      },
-      audioMutedChanged: (muted) {
-        debugPrint("audioMutedChanged: isMuted: $muted");
-      },
-      videoMutedChanged: (muted) {
-        debugPrint("videoMutedChanged: isMuted: $muted");
-      },
-      endpointTextMessageReceived: (senderId, message) {
-        debugPrint(
-            "endpointTextMessageReceived: senderId: $senderId, message: $message");
-      },
-      screenShareToggled: (participantId, sharing) {
-        debugPrint(
-          "screenShareToggled: participantId: $participantId, "
-          "isSharing: $sharing",
-        );
-      },
-      chatMessageReceived: (senderId, message, isPrivate, timestamp) {
-        debugPrint(
-          "chatMessageReceived: senderId: $senderId, message: $message, "
-          "isPrivate: $isPrivate, timestamp: $timestamp",
-        );
-      },
-      chatToggled: (isOpen) => debugPrint("chatToggled: isOpen: $isOpen"),
-      participantsInfoRetrieved: (participantsInfo) {
-        debugPrint(
-            "participantsInfoRetrieved: participantsInfo: $participantsInfo, ");
-      },
-      readyToClose: () {
-        debugPrint("readyToClose");
-      },
-    );
-    await _jitsiMeetPlugin.join(options, listener);
-  }
 
   Widget buildCard({
     required BuildContext context,
@@ -171,12 +68,14 @@ class _VideoConsultationDashboardState extends State<VideoConsultationDashboard>
     required String title,
     required String subtitle,
     required String status,
-    bool isJoinable = false,
-    String? roomId,
+    required bool joinable,
+    required String roomId,
     Color? statusColor,
     VoidCallback? onJoin,
+    required String name,
   }) {
     return Card(
+
       elevation: 5,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
@@ -199,7 +98,7 @@ class _VideoConsultationDashboardState extends State<VideoConsultationDashboard>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    title,
+                    title ,
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                   const SizedBox(height: 4),
@@ -217,9 +116,9 @@ class _VideoConsultationDashboardState extends State<VideoConsultationDashboard>
             ),
 
             // Join Button
-            if (isJoinable)
+            if (joinable)
               ElevatedButton(
-                onPressed: () => join(),
+                onPressed: () => videoService.join(roomId,name),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green,
                   shape: RoundedRectangleBorder(
@@ -240,6 +139,7 @@ class _VideoConsultationDashboardState extends State<VideoConsultationDashboard>
 
   @override
   Widget build(BuildContext context) {
+    Users user = Provider.of<UserState>(context).user!;
     return AfyaLayout(
       title: "Video Consultation",
       subtitle: "",
@@ -277,22 +177,26 @@ class _VideoConsultationDashboardState extends State<VideoConsultationDashboard>
                 ),
               ),
               const SizedBox(height: 10),
-              ...upcomingConsultations.map(
-                (consultation) => buildCard(
-                  context: context,
-                  icon: Icons.calendar_today,
-                  title: consultation["title"],
-                  subtitle: "Date: ${consultation["date"]}",
-                  status: consultation["status"],
-                  isJoinable: consultation["isJoinable"],
-                  roomId: consultation["roomId"],
-                  statusColor: consultation["isJoinable"]
-                      ? Colors.green
-                      : Colors.orange,
-                  onJoin: consultation["isJoinable"]
-                      ? () => join()
-                      : null,
-                ),
+              ...consultation.map(
+                (consultation) {
+                        
+                  final joinable = isJoinable(consultation["time"]);
+                  print(joinable);
+                  return buildCard(
+                    name: user.name,
+                    context: context,
+                    icon: Icons.calendar_today,
+                    title: consultation["doctor"]['name'],
+                    subtitle: "Date: ${consultation["time"]}",
+                    status: consultation["status"],
+                    joinable: joinable,
+                    roomId: consultation["link"],
+                    statusColor: joinable ? Colors.green : Colors.orange,
+                    onJoin: joinable
+                        ? () =>videoService.join(consultation["link"], user.name)
+                        : null,
+                  );
+                },
               ),
               const SizedBox(height: 20),
 
@@ -304,37 +208,6 @@ class _VideoConsultationDashboardState extends State<VideoConsultationDashboard>
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: Colors.blue[700],
-                ),
-              ),
-              const SizedBox(height: 10),
-              ...previousConsultations.map(
-                (consultation) => buildCard(
-                  context: context,
-                  icon: Icons.history,
-                  title: consultation["title"],
-                  subtitle: "Date: ${consultation["date"]}",
-                  status: consultation["status"],
-                  statusColor: Colors.grey,
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Request Consultation Button
-              Center(
-                child: ElevatedButton.icon(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  icon: const Icon(Icons.video_call, size: 24),
-                  label: const Text(
-                    "Request Video Consultation",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
                 ),
               ),
             ],

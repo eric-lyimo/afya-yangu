@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:mtmeru_afya_yangu/features/authentication/models/user.model.dart';
 import 'package:mtmeru_afya_yangu/features/packages/mch/components/mch.services.dart';
@@ -8,6 +9,7 @@ import 'package:mtmeru_afya_yangu/providers/pregnancy.provider.dart';
 import 'package:mtmeru_afya_yangu/providers/user.provider.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import 'package:provider/provider.dart';
+import 'package:mtmeru_afya_yangu/services/api.services.dart';
 
 class MaternalChildHealthScreen extends StatefulWidget {
   const MaternalChildHealthScreen({super.key});
@@ -19,26 +21,72 @@ class MaternalChildHealthScreen extends StatefulWidget {
 
 class _MaternalChildHealthScreenState extends State<MaternalChildHealthScreen>
     with SingleTickerProviderStateMixin {
-
+  Map<String, dynamic>? weekDetails;
   late TabController _tabController;
+  bool isLoading = true;
+  String? token;
+  final apiService = ApiService();
+  bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    // Ensure pregnancy data is loaded
-    final pregnancyState = context.read<PregnancyState>();
-    pregnancyState.loadPregnancyData();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInitialized) {
+      final userState = context.read<UserState>();
+      final pregnancyState = context.read<PregnancyState>();
+      token = userState.user?.token;
+
+      // kick off data load
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        pregnancyState.loadPregnancyData();
+      });
+      fetchWeekDetails(pregnancyState.pregnancyWeek);
+
+      _isInitialized = true;
+    }
+  }
+
+  Future<void> fetchWeekDetails(int week) async {
+    try {
+      final data = await apiService.get(
+        '/pregnancy/week/$week',
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+      if (data != null && data['data'] != null) {
+        setState(() {
+          weekDetails = Map<String, dynamic>.from(data['data']);
+        });
+      }
+    } catch (e) {
+      debugPrint("Failed to load week details: $e");
+    } finally {
+      // always stop loading
+      setState(() => isLoading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final pregnancyState = context.watch<PregnancyState>();
-    final double progress = pregnancyState.pregnancyProgress; // Fetch progress dynamically
-    final String currentWeek = pregnancyState.pregnancyWeek; // Current week
-    final String dueDate = pregnancyState.dueDate; // Due date
+    final double progress = pregnancyState.pregnancyProgress;
+    final int currentWeek = pregnancyState.pregnancyWeek;
+    final String dueDate = pregnancyState.dueDate;
+    final user = context.watch<UserState>().user;
 
-    var user = context.watch<UserProvider>().user;
+    // Show spinner until we know the user & have attempted to load
+    if (isLoading || user == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return MchLayout(
       tabController: _tabController,
@@ -53,8 +101,16 @@ class _MaternalChildHealthScreenState extends State<MaternalChildHealthScreen>
           TabBarView(
             controller: _tabController,
             children: [
-              _buildPregnancyTracker(progress, currentWeek, dueDate,user!),
+              // 1️⃣ Pregnancy Tracker Tab
+              weekDetails != null
+                  ? _buildPregnancyTracker(
+                      progress, currentWeek, dueDate, user, weekDetails!)
+                  : _buildWeekDetailsFallback(),
+
+              // 2️⃣ Awaiting Baby Tab
               const AwaitingBaby(),
+
+              // 3️⃣ Educational Resources Tab
               _buildEducationalResources(),
             ],
           ),
@@ -63,8 +119,30 @@ class _MaternalChildHealthScreenState extends State<MaternalChildHealthScreen>
     );
   }
 
+  /// Fallback UI when weekDetails is null
+  Widget _buildWeekDetailsFallback() {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 64, color: Colors.grey),
+            SizedBox(height: 16),
+            Text(
+              'Couldn’t load pregnancy week details.\nPlease check your connection or try again later.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 18, color: Colors.black54),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+
   // Hero Banner with Progress Indicator
-  Widget _buildHeroBanner(double progress, String currentWeek, String dueDate) {
+  Widget _buildHeroBanner(double progress, int currentWeek, String dueDate) {
     return Card(
       elevation: 4,
       margin: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
@@ -109,7 +187,7 @@ class _MaternalChildHealthScreenState extends State<MaternalChildHealthScreen>
   }
 
   // Pregnancy Tracker Section
-  Widget _buildPregnancyTracker(double progress, String currentWeek, String dueDate,Users user) {
+  Widget _buildPregnancyTracker(double progress, int currentWeek, String dueDate,Users user,Map<String, dynamic> weekDetails) {
     return ListView(
       padding: const EdgeInsets.all(16.0),
       children: [
@@ -120,21 +198,20 @@ class _MaternalChildHealthScreenState extends State<MaternalChildHealthScreen>
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
 
-        const MchServices(),
+        MchServices(weekDetails: weekDetails),
 
         const SizedBox(height: 10),
         
         _buildCardWithAnimation(
           title: "Baby's Development",
-          description:
-              "Your baby's lungs are developing rapidly! Be prepared for your next ultrasound.",
+          description: weekDetails['babyDevelopment'] ?? "Hakuna Taarifa kwa sasa.",
           icon: FontAwesomeIcons.baby,
           backgroundColor: Colors.pinkAccent,
         ),
         const SizedBox(height: 10),
         _buildCardWithAnimation(
           title: "Tips for the Week",
-          description: "Stay hydrated and get enough rest.",
+          description: weekDetails['tips'] ?? "Hakuna Taarifa kwa sasa.",
           icon: FontAwesomeIcons.tint,
           backgroundColor: Colors.deepPurpleAccent,
         ),
@@ -186,7 +263,7 @@ class _MaternalChildHealthScreenState extends State<MaternalChildHealthScreen>
           child: Icon(icon, color: Colors.white),
         ),
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(description),
+        subtitle: HtmlWidget(description),
       ),
     );
   }
@@ -207,4 +284,5 @@ class _MaternalChildHealthScreenState extends State<MaternalChildHealthScreen>
       ),
     );
   }
+
 }
