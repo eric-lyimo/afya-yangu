@@ -75,7 +75,7 @@ class AfyaBooking extends StatelessWidget {
                                 const SizedBox(width: 6),
                                 Flexible(
                                   child: Text(
-                                    item['speciality'],
+                                    item['specialty'],
                                     style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w500,
@@ -196,7 +196,7 @@ Widget showProfile(items, BuildContext context) => SizedBox(
                 ),
                 child: Center(
                   child: Text(
-                    items['speciality'] ?? 'Specialist', // Ensure speciality is present
+                    items['specialty'] ?? 'Specialist', // Ensure speciality is present
                     style: const TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
@@ -254,7 +254,7 @@ Widget showProfile(items, BuildContext context) => SizedBox(
 
           // Profile Description Section with wrapping
           Text(
-            items['profile'] ?? 'No profile description available.',
+            items['bio'] ?? 'No profile description available.',
             textAlign: TextAlign.left,
             style: TextStyle(
               fontSize: 14,
@@ -263,7 +263,7 @@ Widget showProfile(items, BuildContext context) => SizedBox(
               fontStyle: FontStyle.italic,
             ),
             softWrap: true, // Allow text wrapping
-            overflow: TextOverflow.ellipsis, // Truncate if too long
+            overflow: TextOverflow.visible, // Truncate if too long
           ),
           const SizedBox(height: 24),
 

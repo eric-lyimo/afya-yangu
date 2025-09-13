@@ -1,34 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:mtmeru_afya_yangu/features/appointments/controllers/appointment.controller.dart';
 import 'package:mtmeru_afya_yangu/features/appointments/screen/clinic.booking.dart';
 import 'package:mtmeru_afya_yangu/features/appointments/screen/doctors.list.dart';
+import 'package:mtmeru_afya_yangu/features/appointments/screen/video.booking.dart';
 import 'package:mtmeru_afya_yangu/features/home/components/afyaAppBar.appbar.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+import 'package:mtmeru_afya_yangu/providers/user.provider.dart';
+import 'package:provider/provider.dart'; // or Riverpod/any state mgmt
 
-class AppointmentsScreen extends StatelessWidget {
+class AppointmentsScreen extends StatefulWidget {
   const AppointmentsScreen({super.key});
 
-  Future<List<Map<String, dynamic>>> fetchData() async {
-    final url = Uri.parse('http://192.168.21.114/mtmerurrh/api/doctors'); // Replace with your machine's IP
+  @override
+  State<AppointmentsScreen> createState() => _AppointmentsScreenState();
+}
 
-    try {
-      final response = await http.get(url);
+class _AppointmentsScreenState extends State<AppointmentsScreen> {
+  final controller = AppointmentController();
+  late Future<List<Map<String, dynamic>>> doctorFuture;
 
-      if (response.statusCode == 200) {
-        // Successful response
-        final List<dynamic> data = jsonDecode(response.body);
-        return data.map((e) => e as Map<String, dynamic>).toList();
-      } else {
-        // Handle error response
-        print('Error: ${response.statusCode}');
-        return [];
-      }
-    } catch (e) {
-      // Handle exceptions
-      print('Exception: $e');
-      return [];
-    }
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final user = Provider.of<UserState>(context).user; // Adjust if using Riverpod or custom logic
+    doctorFuture = controller.fetchAvailableDoctors(user!.token);
   }
 
   @override
@@ -54,25 +49,23 @@ class AppointmentsScreen extends StatelessWidget {
               ),
               Expanded(
                 child: FutureBuilder<List<Map<String, dynamic>>>(
-                  future: fetchData(),
+                  future: doctorFuture,
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
                     } else if (snapshot.hasError) {
-                      return Center(
-                        child: Text('Error: ${snapshot.error}'),
-                      );
+                      return Center(child: Text('Error: ${snapshot.error}'));
                     } else if (snapshot.hasData && snapshot.data!.isNotEmpty) {
                       final doctors = snapshot.data!;
                       return TabBarView(
                         children: <Widget>[
                           AfyaBooking(doctors: doctors),
                           const AfyaClinicBooking(),
-                          const Icon(Icons.directions_transit),
+                          VideoBooking(doctors: doctors),
                         ],
                       );
                     } else {
-                      return const Center(child: Text("No data available"));
+                      return const Center(child: Text("No available doctors found"));
                     }
                   },
                 ),

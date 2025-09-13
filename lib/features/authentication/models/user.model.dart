@@ -9,18 +9,18 @@ Users usersFromJson(String str) => Users.fromJson(json.decode(str));
 String usersToJson(Users data) => json.encode(data.toJson());
 
 class Users {
-    final String email;
-    final String password;
+    final String? email;
     final String phone;
     final String name;
     final String title;
     final String gender;
     final String dob;
+    final String token;
     final int userId;
 
     Users({
+       required this.token,
         required this.email,
-        required this.password,
         required this.phone,
         required this.name,
         required this.dob,
@@ -31,18 +31,17 @@ class Users {
 
     factory Users.fromJson(Map<String, dynamic> json) => Users(
         email: json["email"],
-        password: json["password"],
         phone: json["phone"],
         name: json["name"], 
         dob: json['dob'], 
         gender: json['gender'], 
         title: json['title'], 
         userId: json['id'],
+        token:json['token']
     );
 
     Map<String, dynamic> toJson() => {
         "email": email,
-        "password": password,
         "phone": phone,
         "name":name,
         "title":title,
@@ -52,9 +51,9 @@ class Users {
     };
       factory Users.fromMap(Map<String, dynamic> map) {
     return Users(
+      token: map['token'],
       name: map['name'],
       email: map['email'],
-      password: map['password'], 
       phone: map['phone'], 
       dob: map['dob'], 
       gender: map['gender'], 
@@ -72,7 +71,7 @@ class Users {
       'gender':gender,
       'email':email,
       'phone':phone,
-      'password':password
+      'token':token
     };
   }
 }

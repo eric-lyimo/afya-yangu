@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mtmeru_afya_yangu/features/authentication/controllers/user.controller.dart';
-import 'package:mtmeru_afya_yangu/features/authentication/models/user.model.dart';
-import 'package:mtmeru_afya_yangu/features/authentication/screen/register.screen.dart';
-import 'package:mtmeru_afya_yangu/features/home/screen/home.screen.dart';
-import 'package:mtmeru_afya_yangu/providers/user.provider.dart';
-import 'package:provider/provider.dart';
+import 'package:mtmeru_afya_yangu/nav.bar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 
@@ -22,8 +18,9 @@ class _LoginScreenState extends State<LoginScreen> {
   bool isVisible = true;
   bool loginAttempt = false;
   bool rememberMe = false;
+    bool isLoading = false;
 
-  final db = DatabaseHelper(); // Your DatabaseHelper instance
+  final db = UserController(); // Your DatabaseHelper instance
   final formKey = GlobalKey<FormState>();
 
   @override
@@ -45,30 +42,30 @@ class _LoginScreenState extends State<LoginScreen> {
 
 
 void _login(BuildContext context, String phone, String password, bool rememberMe) async {
-  final dbHelper = DatabaseHelper();
+  setState(() {
+      isLoading = true;
+  });
 
-  final userData = await dbHelper.loginUser(phone, password);
-  if (userData != null) {
-    final user = Users(
-      name: userData[DatabaseHelper.columnName],
-      email: userData[DatabaseHelper.columnEmail],
-      phone: userData[DatabaseHelper.columnPhone],
-      dob: userData[DatabaseHelper.columnDob]??"",
-      gender: userData[DatabaseHelper.columnGender]??'',
-      title: userData[DatabaseHelper.columnTitle]??"", password: '', 
-      userId: userData[DatabaseHelper.columnUserId],
-    );
-
-    Provider.of<UserProvider>(context, listen: false).setUser(user);
-
+  final controller = UserController();
+  final response = await controller.loginUser(phone: phone, password:password,context: context);
+  if (response['success']==true) {
+        setState(() {
+      isLoading = false; 
+    });
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => const Home()),
+      MaterialPageRoute(builder: (context) => AfyaBottomNavBar()),
     );
   } else {
+      setState(() {
+      isLoading = false;
+    });
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Invalid credentials')),
-    );
+        SnackBar(
+          content: Text(response['message']),
+          backgroundColor: Colors.red,
+        ),
+      );
   }
 }
 
@@ -210,51 +207,20 @@ void _login(BuildContext context, String phone, String password, bool rememberMe
                               Color(0xFF073b4c),
                             ]),
                           ),
-                          child: const Center(
-                            child: Text(
-                              'SIGN IN',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 20,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 150),
-                      Align(
-                        alignment: Alignment.bottomRight,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            const Text(
-                              "Don't have an account?",
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.grey,
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (builder) => const RegisterScreen(),
+                          child:  Center(
+                            child: isLoading
+                              ?  const CircularProgressIndicator(
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                )
+                              : const Text(
+                                  'SIGN IN',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 20,
+                                    color: Colors.white,
                                   ),
-                                );
-                              },
-                              child: const Text(
-                                "Register",
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 17,
-                                  color: Colors.black,
                                 ),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
                     ],

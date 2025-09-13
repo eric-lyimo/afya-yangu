@@ -46,7 +46,7 @@ class _BasicInfoState extends State<BasicInfo> {
   _saveChanges(Users user) async {
     if (_formKey.currentState!.validate()) {
       // Assuming updateUserProfile returns a response with success and message keys
-      Map<String, dynamic> resp = await DatabaseHelper().updateUserProfile(context: context, user: user);
+      Map<String, dynamic> resp = await UserController().updateUserProfile(context: context, user: user);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(resp['message'])),
       );
@@ -55,12 +55,12 @@ class _BasicInfoState extends State<BasicInfo> {
 
   @override
   Widget build(BuildContext context) {
-    var user = context.watch<UserProvider>().user;
+    var user = context.watch<UserState>().user;
 
     if (user != null) {
       fullName.text = user.name;
       phone.text = user.phone;
-      email.text = user.email;
+      email.text = user.email!;
       gender.text = user.gender;
       title.text = user.title;
       dob = user.dob;
@@ -178,14 +178,14 @@ class _BasicInfoState extends State<BasicInfo> {
                     color: Theme.of(context).primaryColor,
                     onPressed: () {
                       Users updated = Users(
+                        token: user!.token,
                         email: email.text,
                         phone: phone.text,
                         name: fullName.text,
                         dob: dob,
                         gender: gender.text,
                         title: title.text,
-                        userId: user!.userId, 
-                        password: user.password,
+                        userId: user.userId, 
                       );
                       _saveChanges(updated);
                     },
