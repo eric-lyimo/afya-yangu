@@ -1,5 +1,5 @@
 class Pregnancies {
-  final int id;
+  final int? id;
   final int cycle; 
   final String lmp;
   final String edd;

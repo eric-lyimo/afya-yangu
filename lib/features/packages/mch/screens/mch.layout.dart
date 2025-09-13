@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:mtmeru_afya_yangu/features/charts/screens/chat.dart';
 import 'package:mtmeru_afya_yangu/features/home/components/emergency.dart';
-import 'package:mtmeru_afya_yangu/features/packages/controller/subscription.dart';
-import 'package:mtmeru_afya_yangu/providers/pregnancy.provider.dart';
 import 'package:mtmeru_afya_yangu/providers/user.provider.dart';
 import 'package:provider/provider.dart';
 
@@ -20,32 +17,19 @@ class MchLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    var user = context.watch<UserProvider>().user;
+    var user = context.watch<UserState>().user;
 
     void handleUnsubscribe(int userId) async {
-    final result = await PackagesController().unsubscribe(userId);
 
-    if (result['success'] == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Unsubscribed successfully!'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      await context.read<PregnancyState>().clearSubscription();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(result['message'] ?? 'Error occurred during unsubscribe'),
-          backgroundColor: Colors.red,
-        ),
-      );
     }
-  }
-    return SafeArea(
-      child: Scaffold(
-      backgroundColor: Colors.white,
+    return Scaffold(
+      backgroundColor: const Color.fromARGB(255, 250, 252, 252),
       appBar: AppBar(
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.only(
+              bottomRight: Radius.circular(25),
+              bottomLeft: Radius.circular(25)),
+        ),
         actions: [
           IconButton(
             onPressed: (){
@@ -76,20 +60,12 @@ class MchLayout extends StatelessWidget {
           )
           
         ],
-         flexibleSpace: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors:  [Theme.of(context).primaryColor, Theme.of(context).primaryColorDark],
-                begin: Alignment.bottomRight,
-                end: Alignment.topLeft
-                )  
-            ),
-          ),
         title:  Text(title),
-        backgroundColor: Colors.blue,
+        backgroundColor: Theme.of(context).primaryColorDark,
         elevation: 0,
         bottom: TabBar(
           controller: tabController,
+          unselectedLabelColor: Colors.white,
           indicatorColor: Colors.white,
           tabs: const [
             Tab(icon: Icon(FontAwesomeIcons.heart), text: "Tracker"),
@@ -99,41 +75,14 @@ class MchLayout extends StatelessWidget {
         ),
       ),
         body: body,
-        floatingActionButton: Stack(
-            children: [
-              const Align(
-                alignment: Alignment.bottomLeft,
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: EmergencyButton(),
-                ),
-              ),
-              Align(
-                alignment: Alignment.bottomRight,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: FloatingActionButton(
-                    backgroundColor: Theme.of(context).primaryColorDark,
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const AfyaChat()),
-                      );
-                    },
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(50),
-                    ),
-                    child: const FaIcon(
-                      FontAwesomeIcons.commentMedical,
-                      size: 40,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
-            ],
+        floatingActionButton: 
+          const Align(
+            alignment: Alignment.bottomLeft,
+            child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: EmergencyButton(),
+            ),
           ),
-        ),
     );
   }
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:mtmeru_afya_yangu/features/econsultation/screen/video.call.dart';
+import 'package:mtmeru_afya_yangu/features/home/screen/home.screen.dart';
 
 class ServicesScrollView extends StatelessWidget {
   const ServicesScrollView({super.key});
@@ -24,25 +26,26 @@ class ServicesScrollView extends StatelessWidget {
                       context,
                       icon: FontAwesomeIcons.userNurse,
                       title: 'Nurse at Home',
-                      iconColor: Theme.of(context).primaryColor,
+                      iconColor: Theme.of(context).primaryColor, 
+                      page: const Home(),
                     ),
                     _serviceCard(
                       context,
                       icon: FontAwesomeIcons.userDoctor,
                       title: 'Doctor at Home',
-                      iconColor: Colors.orange.shade400,
+                      iconColor: Colors.orange.shade400, page: const Home(),
                     ),
                     _serviceCard(
                       context,
                       icon: FontAwesomeIcons.video,
                       title: 'Video Consultation',
-                      iconColor: Colors.green.shade400,
+                      iconColor: Colors.green.shade400, page: const VideoConsultationDashboard(),
                     ),
                     _serviceCard(
                       context,
                       icon: FontAwesomeIcons.pills,
                       title: 'Medication Management',
-                      iconColor: Colors.purple.shade400,
+                      iconColor: Colors.purple.shade400, page: const Home(),
                     ),
                   ],
                 ),
@@ -57,6 +60,7 @@ class ServicesScrollView extends StatelessWidget {
   Widget _serviceCard(BuildContext context, {
     required IconData icon, 
     required String title, 
+    required Widget page,
     Color backgroundColor = Colors.white,
     required Color iconColor,
   }) {
@@ -83,7 +87,7 @@ class ServicesScrollView extends StatelessWidget {
           elevation: 5,
           child: InkWell(
             onTap: () {
-              // Handle tap action
+                Navigator.push(context, MaterialPageRoute(builder: (context)=>page));
             },
             borderRadius: BorderRadius.circular(15),
             child: Container(

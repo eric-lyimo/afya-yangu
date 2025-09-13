@@ -1,25 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:mtmeru_afya_yangu/features/authentication/models/user.model.dart';
 import 'package:mtmeru_afya_yangu/features/home/components/afyaAppBar.appbar.dart';
-import 'package:mtmeru_afya_yangu/features/packages/controller/subscription.dart';
 import 'package:mtmeru_afya_yangu/features/packages/mch/controller/pregnancy.controller.dart';
 import 'package:mtmeru_afya_yangu/features/packages/mch/screens/mch.dart';
-import 'package:mtmeru_afya_yangu/features/packages/model/subscriptions.dart';
 import 'package:mtmeru_afya_yangu/providers/pregnancy.provider.dart';
 import 'package:mtmeru_afya_yangu/providers/user.provider.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
-class MaternalChildHealthSubscription extends StatelessWidget {
+class MaternalChildHealthSubscription extends StatefulWidget {
   const MaternalChildHealthSubscription({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  _MaternalChildHealthSubscriptionState createState() => _MaternalChildHealthSubscriptionState();
+}
 
-    
+class _MaternalChildHealthSubscriptionState extends State<MaternalChildHealthSubscription> {
+  bool _isLoading = false;
+
+  @override
+  Widget build(BuildContext context) {
     final pregnancyState = Provider.of<PregnancyState>(context);
     final DateFormat dateFormatter = DateFormat('yyyy-MM-dd');
-        var user = context.watch<UserProvider>().user;
+    var user = context.watch<UserState>().user;
 
     return AfyaLayout(
       title: 'Subscription',
@@ -37,7 +40,7 @@ class MaternalChildHealthSubscription extends StatelessWidget {
                   color: Colors.pinkAccent.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12.0),
                 ),
-                child:  const Column(
+                child: const Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
@@ -76,7 +79,7 @@ class MaternalChildHealthSubscription extends StatelessWidget {
                           lastDate: DateTime(2100),
                         );
                         if (pickedDate != null) {
-                          pregnancyState.setLMP(pickedDate);
+                          pregnancyState.setLMP(pickedDate, user!);
                         }
                       },
                       icon: const Icon(Icons.calendar_today_outlined),
@@ -111,7 +114,7 @@ class MaternalChildHealthSubscription extends StatelessWidget {
                       divisions: 25,
                       label: "${pregnancyState.cycleLength} days",
                       onChanged: (value) {
-                        pregnancyState.setCycleLength(value.toInt());
+                        pregnancyState.setCycleLength(value.toInt(), user!);
                       },
                       activeColor: Colors.pinkAccent,
                       inactiveColor: Colors.pink[100],
@@ -144,7 +147,7 @@ class MaternalChildHealthSubscription extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: 20),
-              if (pregnancyState.pregnancyWeek.isNotEmpty) ...[
+              if (pregnancyState.pregnancyWeek > 0) ...[
                 const Text(
                   "Current Pregnancy Week:",
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
@@ -155,7 +158,7 @@ class MaternalChildHealthSubscription extends StatelessWidget {
                     const Icon(Icons.pregnant_woman, color: Colors.pinkAccent),
                     const SizedBox(width: 10),
                     Text(
-                      pregnancyState.pregnancyWeek,
+                      pregnancyState.pregnancyWeek.toString(),
                       style: const TextStyle(fontSize: 16, color: Colors.black87),
                     ),
                   ],
@@ -166,12 +169,28 @@ class MaternalChildHealthSubscription extends StatelessWidget {
               // Start My Journey Button
               Center(
                 child: ElevatedButton(
-                  onPressed:(){
-                      Map<String , dynamic> preg = {'userId': user?.userId,  'edd': pregnancyState.dueDate,  'lmp': pregnancyState.selectedLMP.toString(),  'cycle': pregnancyState.cycleLength.toDouble() };
-                        _savePregnancy(context, preg, user!);
-                  } ,
+                  onPressed: _isLoading
+                      ? null
+                      : () async {
+                          setState(() {
+                            _isLoading = true;
+                          });
+
+                          Map<String, dynamic> preg = {
+                            'user_id': user?.userId,
+                            'edd': pregnancyState.dueDate,
+                            'lmp': pregnancyState.selectedLMP.toString(),
+                            'cycle': pregnancyState.cycleLength.toDouble(),
+                          };
+
+                          await _savePregnancy(context, preg, user!,pregnancyState);
+
+                          setState(() {
+                            _isLoading = false;
+                          });
+                        },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor:  Theme.of(context).primaryColor,
+                    backgroundColor: Theme.of(context).primaryColor,
                     padding: const EdgeInsets.symmetric(
                       vertical: 16.0,
                       horizontal: 32.0,
@@ -182,10 +201,14 @@ class MaternalChildHealthSubscription extends StatelessWidget {
                     shadowColor: Colors.pinkAccent.withOpacity(0.5),
                     elevation: 8,
                   ),
-                  child: const Text(
-                    "Start My Journey",
-                    style: TextStyle(fontSize: 18, color: Colors.white),
-                  ),
+                  child: _isLoading
+                      ? const CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        )
+                      : const Text(
+                          "Start My Journey",
+                          style: TextStyle(fontSize: 18, color: Colors.white),
+                        ),
                 ),
               ),
             ],
@@ -194,21 +217,25 @@ class MaternalChildHealthSubscription extends StatelessWidget {
       ),
     );
   }
-  
-  _savePregnancy(BuildContext context, Map<String,dynamic> preg, Users user) async{
 
-  int resp = await  PregnancyController().insertPregnancy(preg);
+  Future<void> _savePregnancy(BuildContext context, Map<String, dynamic> preg, Users user, PregnancyState pregnancyState) async {
+    try {
+      Map<String, dynamic> resp = await PregnancyController().createPregnancy(preg, user,pregnancyState);
 
-  if (resp > 1) {
-      Subscriptions sub = Subscriptions(packageId: 0, date: "12/1/2024", userId: user.userId, validity: "1/12/2024");
-
-      Map<String, dynamic>? subs = await PackagesController().insertSubscription(sub.toMap());
-      print(subs);
-      Navigator.push(context,MaterialPageRoute(builder: (context) => const MaternalChildHealthScreen()));
-  } else {
-     ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Failed")),
+      if (resp["success"] == true) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const MaternalChildHealthScreen()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(resp['message'] ?? 'An error occurred')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e")),
       );
-  }
+    }
   }
 }

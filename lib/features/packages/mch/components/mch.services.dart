@@ -1,12 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:mtmeru_afya_yangu/features/packages/mch/components/pregnancy.week.dart';
+import 'package:mtmeru_afya_yangu/features/packages/mch/components/symptoms.logs.dart';
+import 'package:mtmeru_afya_yangu/features/packages/mch/models/pregnancy.logs.dart';
 import 'package:mtmeru_afya_yangu/features/packages/mch/screens/symptoms.log.dart';
+import 'package:mtmeru_afya_yangu/providers/pregnancy.provider.dart';
+import 'package:provider/provider.dart';
 
 class MchServices extends StatelessWidget {
-  const MchServices({super.key});
+    final Map<String, dynamic> weekDetails;
+
+  const MchServices({super.key, required this.weekDetails});
+
+
 
   @override
   Widget build(BuildContext context) {
+    var logs = context.watch<PregnancyState>().logs;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 0.0, vertical: 16.0),
       child: Column(
@@ -23,14 +34,16 @@ class MchServices extends StatelessWidget {
                 ),
                 _serviceCard(
                   context: context,
-                  icon: FontAwesomeIcons.personPregnant,
-                  title: 'Your Body',
-                  iconColor: Colors.orange.shade400,
+                  icon: FontAwesomeIcons.notesMedical,
+                  handle: ()=>showLogsModal(context,logs),
+                  title: 'Logged Symptoms',
+                  iconColor: Colors.lightGreen,
                 ),
                 _serviceCard(
                   context: context,
-                  icon: FontAwesomeIcons.baby,
-                  title: 'Baby Development',
+                  icon: FontAwesomeIcons.personPregnant,
+                  title: 'Your Body',
+                  handle: ()=> showPregnancyWeekModal(context,weekDetails),
                   iconColor: Colors.purple,
                 ),
               ],
@@ -110,6 +123,25 @@ class MchServices extends StatelessWidget {
     );
   }
 }
+  
+  void showLogsModal(BuildContext context, List<PregnancyLogs> logs) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    builder: (context) => const SymptomLogsDetails(),
+  );
+  }
+  
+void showPregnancyWeekModal(BuildContext context, Map<String, dynamic> weekDetails) {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (_) => PregnancyWeekModal(
+      weekDetails: weekDetails,
+    ),  
+  );
+}
 
 void openLogModal(BuildContext context) {
   showModalBottomSheet(
@@ -117,4 +149,6 @@ void openLogModal(BuildContext context) {
     isScrollControlled: true,
     builder: (context) => const SymptomLoggerScreen(),
   );
+
+
 }
