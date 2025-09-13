@@ -1,5 +1,5 @@
-import 'package:mtmeru_afya_yangu/features/authentication/controllers/user.controller.dart';
-import 'package:sqflite/sqflite.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class PackagesController {
   static final PackagesController _instance = PackagesController._internal();
@@ -10,92 +10,66 @@ class PackagesController {
 
   PackagesController._internal();
 
-  // Table name and column constants
-  static const String packageTable = DatabaseHelper.packageTable;
-    static const String subscriptionTable = DatabaseHelper.tableSubscription;
+  // The base URL for the API
+  final String baseUrl = 'https://your-api-url.com'; // Replace with your API's base URL
 
-  // Insert a pregnancy into local storage
-  Future<Map<String, dynamic>?> insertPackage(Map<String, dynamic> package) async {
-    final db = await DatabaseHelper().database;
-    await db.insert(packageTable, package, conflictAlgorithm: ConflictAlgorithm.replace, );
-    Map<String, dynamic>? packs = await loadPackage();
-   return packs;
-  }
+  // Common headers for the API requests
+  Map<String, String> get _headers => {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    // 'Authorization': 'Bearer YOUR_TOKEN', // Uncomment if authentication is required
+  };
 
-  // Load the first user from the local database
-  Future<Map<String, Object?>?> loadPackage() async {
-    final db = await DatabaseHelper().database;
-
-    // Fetch the first user from the table
-    List<Map<String, Object?>> result = await db.query(
-      packageTable,
-      limit: 1,
-    );
-
-    return result.isNotEmpty ? result.first : null;
-  }
-
-  // Insert a pregnancy into local storage
+  // Insert a new subscription
   Future<Map<String, dynamic>?> insertSubscription(Map<String, dynamic> subscription) async {
-    final db = await DatabaseHelper().database;
-    int sub = await db.insert(subscriptionTable, subscription, conflictAlgorithm: ConflictAlgorithm.replace, );
-    if (sub >1) {
-          return await loadSubcription();
-    } else {
-        return {'success':false, "message":"error occured"};
-    }
-  }
-
-  // Load the first user from the local database
-  Future<Map<String, dynamic>?> loadSubcription() async {
-    final db = await DatabaseHelper().database;
-
-    // Fetch the first user from the table
-    List<Map<String, dynamic>> result = await db.query(
-      subscriptionTable,
-      limit: 1
-    );
-
-    return result.isNotEmpty ? result.first : null;
-  }
-
-  Future<Map<String, dynamic>?> loadSubscription(int userId) async {
-    final db = await DatabaseHelper().database;
-    final result = await db.query(
-      subscriptionTable,
-      where: 'userId = ?',
-      whereArgs: [userId],
-    );
-    return result.isNotEmpty ? result.first : null;
-  }
-
-  Future<void> updateSubscription(Map<String, dynamic> subscription) async {
-    final db = await DatabaseHelper().database;
-    await db.insert(
-      subscriptionTable,
-      subscription,
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-
-  }
-
-  Future<Map<String, dynamic>> unsubscribe(int userId) async {
-    final db = await DatabaseHelper().database;
     try {
-      int deletedCount = await db.delete(
-        subscriptionTable,
-        where: 'userId = ?',
-        whereArgs: [userId],
-      );
-
-      if (deletedCount > 0) {
-        return {'success': true, 'message': 'Unsubscribed successfully'};
-      } else {
-        return {'success': false, 'message': 'No subscription found to unsubscribe'};
-      }
+      final url = Uri.parse('$baseUrl/subscriptions');
+      final response = await http.post(url, headers: _headers, body: json.encode(subscription));
+      return _processResponse(response);
     } catch (e) {
-      return {'success': false, 'message': 'Error during unsubscribe: $e'};
+      throw Exception('Failed to insert subscription: $e');
     }
   }
 
+  // Load subscription details for a user
+  Future<Map<String, dynamic>?> loadSubscription(int userId) async {
+    try {
+      final url = Uri.parse('$baseUrl/subscriptions/$userId');
+      final response = await http.get(url, headers: _headers);
+      return _processResponse(response);
+    } catch (e) {
+      throw Exception('Failed to load subscription: $e');
+    }
+  }
+
+  // Update an existing subscription
+  Future<void> updateSubscription(Map<String, dynamic> subscription) async {
+    try {
+      final url = Uri.parse('$baseUrl/subscriptions');
+      final response = await http.put(url, headers: _headers, body: json.encode(subscription));
+      _processResponse(response);
+    } catch (e) {
+      throw Exception('Failed to update subscription: $e');
+    }
+  }
+
+  // Unsubscribe a user from their package
+  Future<Map<String, dynamic>?> unsubscribe(int userId) async {
+    try {
+      final url = Uri.parse('$baseUrl/subscriptions/$userId');
+      final response = await http.delete(url, headers: _headers);
+      return _processResponse(response);
+    } catch (e) {
+      throw Exception('Failed to unsubscribe: $e');
+    }
+  }
+
+  // Process the response from the API
+  Map<String, dynamic>? _processResponse(http.Response response) {
+    if (response.statusCode == 200) {
+      return json.decode(response.body); // Decode the response body to a Map
+    } else {
+      throw Exception('Error: ${response.statusCode} - ${response.body}');
+    }
+  }
 }

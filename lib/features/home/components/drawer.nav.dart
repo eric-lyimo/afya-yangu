@@ -32,7 +32,7 @@ class _AfyaDrawerState extends State<AfyaDrawer> {
       await prefs.remove('password');
 
       // Clear user data in the provider
-      Provider.of<UserProvider>(context, listen: false).logout();
+      Provider.of<UserState>(context, listen: false).logout();
 
       // Navigate to the login screen, clearing the navigation stack
       Navigator.pushAndRemoveUntil(
@@ -110,7 +110,7 @@ class _AfyaDrawerState extends State<AfyaDrawer> {
 
   @override
   Widget build(BuildContext context) {
-    var user = context.watch<UserProvider>().user;
+    var user = context.watch<UserState>().user;
     return Drawer(
       child: ListView(
         children: [

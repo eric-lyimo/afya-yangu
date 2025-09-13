@@ -1,74 +1,82 @@
 import 'package:flutter/material.dart';
 import 'package:mtmeru_afya_yangu/features/home/screen/home.screen.dart';
 import 'package:mtmeru_afya_yangu/features/packages/mch/screens/landing.page.dart';
+import 'package:mtmeru_afya_yangu/features/packages/mch/screens/mch.dart';
 import 'package:mtmeru_afya_yangu/features/packages/rehabilitation/screen/onboarding.dart';
+import 'package:mtmeru_afya_yangu/providers/pregnancy.provider.dart';
 import 'package:persistent_bottom_nav_bar/persistent_bottom_nav_bar.dart';
+import 'package:provider/provider.dart';
 
 class PackagesHorizontalScrollView extends StatelessWidget {
   const PackagesHorizontalScrollView({super.key});
 
   @override
   Widget build(BuildContext context) {
+    var pregnancy = context.watch<PregnancyState>().pregnancy;
     return Padding(
       padding: const EdgeInsets.all(0.0),
       child: Card(
-        child: Column(         
-              children: [
-                Scrollbar(
-                thickness: 6.0,
-                radius: const Radius.circular(10),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(      
-                        children: [
-                          
-                          _packageCard(
-                            context,
-                            title: 'General Package',
-                            image: 'assets/images/general.jpg',
-                             page: const Home(),
-                          ),
-                          _packageCard(
-                            context,
-                            title: 'Maternal Child Health',
-                            image: 'assets/images/mch.jpg',
-                            page: const MaternalChildHealthLanding(),
-                          ),
-                          _packageCard(
-                            context,
-                            title: 'Rehabilitation Package',
-                            image: 'assets/images/rehab.jpg', 
-                            page: const OnboardingScreen(),
-                          ),
-                        ],
-                      ),
-                  ),
+        child: Column(
+          children: [
+            Scrollbar(
+              thickness: 6.0,
+              radius: const Radius.circular(10),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _packageCard(
+                      context,
+                      title: 'General Package',
+                      image: 'assets/images/general.jpg',
+                      page: const Home(),
+                    ),
+                    _packageCard(
+                      context,
+                      title: 'Maternal Child Health',
+                      image: 'assets/images/mch.jpg',
+                      condition: pregnancy != null,
+                      pageIfTrue: const MaternalChildHealthScreen(), // Screen to render if data exists
+                      pageIfFalse: const MaternalChildHealthLanding(), // Screen to render if no data
+                    ),
+                    _packageCard(
+                      context,
+                      title: 'Rehabilitation Package',
+                      image: 'assets/images/rehab.jpg',
+                      page: const OnboardingScreen(),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
+          ],
+        ),
       ),
-      );
+    );
   }
 
   void _navigateTo(BuildContext context, Widget page) {
-      PersistentNavBarNavigator.pushNewScreen(
+    PersistentNavBarNavigator.pushNewScreen(
       context,
       screen: page,
-      //withNavBar: true,
       pageTransitionAnimation: PageTransitionAnimation.cupertino,
     );
   }
 
-  Widget _packageCard(BuildContext context, {
-    required String title, 
+  Widget _packageCard(
+    BuildContext context, {
+    required String title,
     required String image,
-    required Widget page,
+    Widget? page, // Page if no condition
+    bool? condition, // Optional condition for conditional navigation
+    Widget? pageIfTrue, // Page if condition is true
+    Widget? pageIfFalse, // Page if condition is false
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 2.0),
       child: Container(
         height: 150,
-        width: MediaQuery.of(context).size.width*0.4, // Set width of each card
+        width: MediaQuery.of(context).size.width * 0.4, // Set width of each card
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(15),
           boxShadow: [
@@ -86,7 +94,13 @@ class PackagesHorizontalScrollView extends StatelessWidget {
           ),
           child: InkWell(
             onTap: () {
-              _navigateTo(context,page);
+              if (condition != null) {
+                // Navigate based on the condition
+                _navigateTo(context, condition ? pageIfTrue! : pageIfFalse!);
+              } else {
+                // Navigate to a single page
+                _navigateTo(context, page!);
+              }
             },
             borderRadius: BorderRadius.circular(15),
             child: ClipRRect(
@@ -115,7 +129,7 @@ class PackagesHorizontalScrollView extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 8.0),
                         child: Text(
                           title,
-                          style:  TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
                             color: Theme.of(context).primaryColorDark,
