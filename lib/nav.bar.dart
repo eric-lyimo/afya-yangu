@@ -72,9 +72,10 @@ class AfyaBottomNavBar extends StatelessWidget {
       items: _navBarsItems(),
 
       backgroundColor: Colors.white,
-      handleAndroidBackButtonPress: true,
+      handleAndroidBackButtonPress: false,
       resizeToAvoidBottomInset: true,
-      stateManagement: true,
+      stateManagement: false,
+      
       
         hideNavigationBarWhenKeyboardAppears: true,
         padding: const EdgeInsets.only(top: 8),
