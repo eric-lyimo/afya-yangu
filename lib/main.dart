@@ -1,11 +1,12 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:mtmeru_afya_yangu/features/authentication/screen/Login.pin.dart';
 import 'package:mtmeru_afya_yangu/nav.bar.dart';
 import 'package:mtmeru_afya_yangu/providers/cart.provider.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
 import 'package:mtmeru_afya_yangu/features/appointments/screen/appointments.screen.dart';
 import 'package:mtmeru_afya_yangu/features/authentication/screen/Login.screen.dart';
 import 'package:mtmeru_afya_yangu/features/authentication/screen/onboarding.screen.dart';
@@ -47,14 +48,12 @@ class MyHttpOverrides extends HttpOverrides {
           (X509Certificate cert, String host, int port) => true;
   }
 }
+const storage = FlutterSecureStorage();
 
 class AfyaYangu extends StatelessWidget {
   final bool isRemembered;
 
-  const AfyaYangu({
-    super.key,
-    required this.isRemembered,
-  });
+  const AfyaYangu({super.key, required this.isRemembered});
 
   @override
   Widget build(BuildContext context) {
@@ -74,20 +73,33 @@ class AfyaYangu extends StatelessWidget {
       themeMode: ThemeMode.system,
       theme: afyaYanguTheme(),
       home: Scaffold(
-        body:Container(
-            color: const Color(0x00fff8e7),
-            child: _determineInitialScreen(userProvider, isRemembered),
+        body: Container(
+          color: const Color(0x00fff8e7),
+          child: FutureBuilder<Widget>(
+            future: _getInitialScreen(userProvider),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              return snapshot.data!;
+            },
           ),
         ),
+      ),
     );
   }
 
-  Widget _determineInitialScreen(UserState userProvider, bool isRemembered) {
+  Future<Widget> _getInitialScreen(UserState userProvider) async {
+    final storedPin = await storage.read(key: 'user_pin');
+
     if (userProvider.user != null) {
-      // If the user is loaded from the database
-      return  AfyaBottomNavBar();
+      // User is logged in
+      return AfyaBottomNavBar();
+    } else if (storedPin != null) {
+      // PIN exists → show PIN login
+      return const PinLoginScreen();
     } else if (isRemembered) {
-      // If the user is remembered but not found in the database (edge case)
+      // Remembered but no PIN or user → fallback to normal login
       return const LoginScreen();
     } else {
       // Default to Welcome Screen for new users
